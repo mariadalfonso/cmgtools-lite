@@ -34,25 +34,31 @@ class badMuonAnalyzer( Analyzer ):
         event.crazyMuon = []
 
         for muon in self.handles['muons'].product():
+
             ##### check the muon inner and globaTrack
+            foundBadTrack = False
             if muon.innerTrack().isNonnull():
                 it = muon.innerTrack()
                 if it.pt()<minMuPt : continue
                 if it.quality(it.highPurity): continue
                 if it.ptError()/it.pt() < minMuonTrackRelErr: continue
-                if muon.globalTrack().isNonnull():
-                    gt = muon.innerTrack()
-                    if gt.pt()<minMuPt : continue
-                    if gt.quality(gt.highPurity): continue
-                    if gt.ptError()/gt.pt() < minMuonTrackRelErr: continue
-            ##### check the pfCandidate
-                    print 'there is suspicious muon  ' 
-                    for c in self.handles['packedCandidates'].product():
-                        if c.pt()<minMuPt : continue
-                        if abs(c.pdgId()) == 13:
-                            if deltaR( it.eta(), it.phi(), c.eta(), c.phi() ) < maxDR:
-                                flagged = True
-                                break
+                foundBadTrack = True
+
+            if muon.globalTrack().isNonnull():
+                gt = muon.innerTrack()
+                if gt.pt()<minMuPt : continue
+                if gt.ptError()/gt.pt() < minMuonTrackRelErr: continue
+                foundBadTrack = True
+
+            if foundBadTrack:
+                #   print 'there is suspicious muon  '
+                for c in self.handles['packedCandidates'].product():
+                    if c.pt()<minMuPt : continue
+                    if abs(c.pdgId()) == 13:
+                        if deltaR( muon.eta(), muon.phi(), c.eta(), c.phi() ) < maxDR:
+                            flagged = True
+                            event.crazyMuon.append(c)
+                            break
             if flagged: break
 
         event.badMuon=flagged
