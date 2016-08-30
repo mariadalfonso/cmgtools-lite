@@ -28,6 +28,7 @@ class badMuonAnalyzer( Analyzer ):
         minMuonTrackRelErr = 0.5
         suspiciousAlgo=14
         minMuPt = 100
+        minSegCom = 0.3
         flagged = False
 
         event.crazyMuon = []
@@ -42,6 +43,8 @@ class badMuonAnalyzer( Analyzer ):
                 if it.quality(it.highPurity): continue
                 if it.ptError()/it.pt() < minMuonTrackRelErr: continue
                 if it.originalAlgo()==suspiciousAlgo and it.algo()==suspiciousAlgo:
+                    foundBadTrack = True
+                if muon.segmentCompatibility() > minSegCom:
                     foundBadTrack = True
 
             if foundBadTrack:
