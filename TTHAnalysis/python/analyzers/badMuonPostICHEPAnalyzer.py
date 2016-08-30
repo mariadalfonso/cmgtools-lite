@@ -8,26 +8,28 @@ from PhysicsTools.HeppyCore.statistics.counter import Counter, Counters
 from PhysicsTools.HeppyCore.utils.deltar import *
 import PhysicsTools.HeppyCore.framework.config as cfg
 
-class badMuonAnalyzer( Analyzer ):
+class badMuonPostICHEPAnalyzer( Analyzer ):
 
     def __init__(self, cfg_ana, cfg_comp, looperName ):
-        super(badMuonAnalyzer,self).__init__(cfg_ana,cfg_comp,looperName)
+        super(badMuonPostICHEPAnalyzer,self).__init__(cfg_ana,cfg_comp,looperName)
 
     def declareHandles(self):
-        super(badMuonAnalyzer, self).declareHandles()
+        super(badMuonPostICHEPAnalyzer, self).declareHandles()
         self.handles['muons'] = AutoHandle(self.cfg_ana.muons,"std::vector<pat::Muon>")
         self.handles['packedCandidates'] = AutoHandle( self.cfg_ana.packedCandidates, 'std::vector<pat::PackedCandidate>')
 
     def beginLoop(self, setup):
-        super(badMuonAnalyzer,self).beginLoop( setup )
+        super(badMuonPostICHEPAnalyzer,self).beginLoop( setup )
 
     def process(self, event):
         self.readCollections( event.input )
         
         maxDR = 0.001
         minMuonTrackRelErr = 0.5
+        minMuonBestTrackRelErr = 2.
         suspiciousAlgo=14
         minMuPt = 100
+        minSegCom = 0.3
         flagged = False
 
         event.crazyMuon = []
@@ -36,13 +38,16 @@ class badMuonAnalyzer( Analyzer ):
 
             ##### check the muon inner and globaTrack
             foundBadTrack = False
-            if muon.innerTrack().isNonnull():
-                it = muon.innerTrack()
-                if it.pt()<minMuPt : continue
-                if it.quality(it.highPurity): continue
-                if it.ptError()/it.pt() < minMuonTrackRelErr: continue
-                if it.originalAlgo()==suspiciousAlgo and it.algo()==suspiciousAlgo:
-                    foundBadTrack = True
+            if muon.innerTrack().isNull(): continue
+            if muon.muonBestTrack().isNull(): continue
+            it = muon.innerTrack()
+            bt = muon.bestTrack()
+            if it.pt()<minMuPt : continue
+            if bt.pt()<minMuPt : continue
+            if bt.ptError()/bt.pt() < minMuonBestTrackRelErr: continue
+            if muon.segmentCompatibility() < minSegCom: continue
+            if it.originalAlgo()==suspiciousAlgo and it.algo()==suspiciousAlgo:
+                foundBadTrack = True
 
             if foundBadTrack:
                 #   print 'there is suspicious muon  '
@@ -77,8 +82,8 @@ class badMuonAnalyzer( Analyzer ):
             print '----------------'
             print '----------------'
 
-setattr(badMuonAnalyzer,"defaultConfig", cfg.Analyzer(
-        class_object = badMuonAnalyzer,
+setattr(badMuonPostICHEPAnalyzer,"defaultConfig", cfg.Analyzer(
+        class_object = badMuonPostICHEPAnalyzer,
         packedCandidates = 'packedPFCandidates',
         )
 )
